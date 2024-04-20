@@ -28,8 +28,8 @@ export class ProductsService {
     id: number,
     updateProductDto: UpdateProductDto,
   ): Promise<Product> {
-    const product = await this.productRepository.findOneBy({ code: id });
-    this.productRepository.merge(product, updateProductDto);
+    let product = await this.productRepository.findOneBy({ code: id });
+    product = this.productRepository.merge(product, updateProductDto);
     return this.productRepository.save(product);
   }
 
