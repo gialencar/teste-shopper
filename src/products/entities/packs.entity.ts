@@ -15,11 +15,17 @@ export class Pack {
   @Column({ type: 'bigint', nullable: false })
   qty: number;
 
-  @ManyToOne(() => Product, (product) => product.packs, { nullable: false })
+  @ManyToOne(() => Product, (product) => product.packs, {
+    nullable: false,
+    createForeignKeyConstraints: false,
+  })
   @JoinColumn({ name: 'product_id' })
   product: Product;
 
-  @ManyToOne(() => Product, (product) => product.packs, { nullable: false })
+  @ManyToOne(() => Product, (product) => product.packs, {
+    nullable: false,
+    createForeignKeyConstraints: false,
+  })
   @JoinColumn({ name: 'pack_id' })
   pack: Product;
 }
