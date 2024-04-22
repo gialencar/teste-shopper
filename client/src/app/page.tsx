@@ -1,10 +1,15 @@
 "use client";
 
 import { ChangeEvent, useState } from "react";
+import { CSVToJSON } from "../lib/parse-csv";
 
 export default function Home() {
   const [fileName, setFileName] = useState<string | null>(null);
-  const [fileContent, setFileContent] = useState<string | null>(null);
+  const [fileContent, setFileContent] = useState<
+    { [key: string]: string }[] | null
+  >(null);
+  const [fileIsValid, setFileIsValid] = useState<boolean>(false);
+  const [fileErrors, setFileErrors] = useState<string[]>([]);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -12,10 +17,27 @@ export default function Home() {
     const reader = new FileReader();
     reader.readAsText(file);
     reader.onload = () => {
-      console.log(reader.result);
       setFileName(file.name);
-      setFileContent(reader.result as string);
+      setFileContent(CSVToJSON(reader.result as string));
     };
+  };
+
+  const validateFile = () => {
+    if (!fileContent) return;
+    const errors = fileContent.reduce((acc, item) => {
+      if (!item["product_code"]) acc.push(`"product_code" é obrigatório`);
+      if (!item["new_price"]) acc.push(`"new_price" é obrigatório`);
+      if (item["new_price"] && isNaN(Number(item["new_price"])))
+        acc.push(`"new_price" deve ser um número`);
+      return acc;
+    }, [] as string[]);
+
+    setFileErrors(errors);
+    setFileIsValid(errors.length === 0);
+
+    if (errors.length > 0) return;
+
+    console.log("buscando produto(s)...");
   };
 
   return (
@@ -48,20 +70,33 @@ export default function Home() {
         </div>
         <p className="text-sm text-gray-500">
           {fileContent
-            ? fileContent
+            ? JSON.stringify(fileContent, null, 2)
             : "Nenhum arquivo selecionado"}
         </p>
         <div className="flex gap-2">
-          <button>Validar</button>
-          <button>Atualizar</button>
+          <button
+            className="border border-gray-200 rounded-md py-2 px-4 text-sm font-medium text-gray-700 bg-white hover:bg-gray-200"
+            onClick={validateFile}
+          >
+            Validar
+          </button>
+          <button
+            className="border border-gray-200 rounded-md py-2 px-4 text-sm font-medium text-gray-700 bg-white hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!fileIsValid}
+          >
+            Atualizar
+          </button>
         </div>
-        <div className="bg-red-100 border border-red-200 rounded-md p-4 text-red-700 dark:bg-red-900 dark:border-red-800 dark:text-red-200">
-          <div className="flex items-center space-x-2">
-            <p>
-              Erro: <strong>Arquivo inválido</strong>
-            </p>
+        {fileErrors.length > 0 && (
+          <div className="bg-red-100 border border-red-200 rounded-md p-4 text-red-700 dark:bg-red-900 dark:border-red-800 dark:text-red-200">
+            <div className="flex flex-col items-center space-x-2">
+              <p>Erro(s): {fileErrors.length}</p>
+              {fileErrors.map((error, index) => (
+                <p key={index}>&bull;{error}</p>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </main>
   );
