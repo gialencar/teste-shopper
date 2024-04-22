@@ -67,6 +67,7 @@ describe('ProductsService', () => {
 
   it('should create a product', async () => {
     const product = await service.create({
+      code: 42,
       name: 'Created Test Product',
       cost_price: 10,
       sales_price: 20,
@@ -76,12 +77,10 @@ describe('ProductsService', () => {
   });
 
   it('should update a product', async () => {
-    const product = await service.update(1, {
-      name: 'Updated Test Product',
-      cost_price: 10,
-      sales_price: 20,
+    const product = await service.update(42, {
+      new_price: '19',
     });
     expect(product).toBeDefined();
-    expect(product.name).toBe('Updated Test Product');
+    expect(product.sales_price).toBe(19);
   });
 });
