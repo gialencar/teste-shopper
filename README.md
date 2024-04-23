@@ -1,4 +1,4 @@
-# teste-shopper
+# Teste Full Stack Shopper
 
 ## Pré-requisitos
 
