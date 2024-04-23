@@ -13,9 +13,12 @@ export default function Home() {
   const [product, setProduct] = useState<{ [key: string]: string } | null>(
     null
   );
-  const [updatedProduct, setUpdatedProduct] = useState<{
-    [key: string]: string;
-  } | null>(null);
+  const [updatedProducts, setUpdatedProducts] = useState<
+    | {
+        [key: string]: string;
+      }[]
+    | null
+  >(null);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     setFileIsValid(false);
@@ -64,28 +67,35 @@ export default function Home() {
 
   const updatePrice = () => {
     if (!fileContent) return;
+
     console.log("atualizando preço...");
-    fetch(`http://localhost:3000/products/${fileContent[0]["product_code"]}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ new_price: fileContent[0]["new_price"] }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.error) {
-          console.error("Erro ao atualizar preço:", data.message);
-          setFileErrors([data.message]);
-          setFileIsValid(false);
-          return;
-        }
-        setUpdatedProduct(data);
-        console.log("Preço atualizado com sucesso!");
-      })
-      .catch((error) => {
-        console.error("Erro ao atualizar preço:", error);
-      });
+
+    Promise.all(
+      fileContent.map((content) =>
+        fetch(`http://localhost:3000/products/${content["product_code"]}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ new_price: content["new_price"] }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.error) {
+              console.error("Erro ao atualizar preço:", data.message);
+              setFileErrors((prevErrors) => [...prevErrors, data.message]);
+              setFileIsValid(false);
+              return;
+            }
+            setUpdatedProducts((prevProducts) =>
+              prevProducts ? [...prevProducts, data] : [data]
+            );
+            console.log("Preço atualizado com sucesso!");
+          })
+      )
+    ).catch((error) => {
+      console.error("Erro ao atualizar preço:", error);
+    });
   };
 
   return (
@@ -117,7 +127,7 @@ export default function Home() {
           </span>
         </div>
         <p className="text-sm text-gray-500">
-          {updatedProduct ? (
+          {updatedProducts ? (
             <div>
               <p className="text-xl bg-green-200 rounded-sm px-2 py-1 text-center text-green-900">
                 Preço atualizado com sucesso!
@@ -132,12 +142,14 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>{updatedProduct.code}</td>
-                    <td>{updatedProduct.name}</td>
-                    <td>{product!.sales_price}</td>
-                    <td>{updatedProduct.sales_price}</td>
-                  </tr>
+                  {updatedProducts.map((product, index) => (
+                    <tr key={product.code}>
+                      <td>{product.code}</td>
+                      <td>{product.name}</td>
+                      <td>{fileContent![index].sales_price}</td>
+                      <td>{product.sales_price}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
