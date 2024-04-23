@@ -50,7 +50,7 @@ TYPEORM_SYNC - sincronizar o banco de dados
 npm run start:both
 ```
 
-3. Acesse o aplicativo em [http://localhost:3001](http://localhost:3001)
+2. Acesse o aplicativo em [http://localhost:3001](http://localhost:3001)
 
 ## Tecnologias
 
