@@ -10,8 +10,15 @@ export default function Home() {
   >(null);
   const [fileIsValid, setFileIsValid] = useState<boolean>(false);
   const [fileErrors, setFileErrors] = useState<string[]>([]);
+  const [product, setProduct] = useState<{ [key: string]: string } | null>(
+    null
+  );
+  const [updatedProduct, setUpdatedProduct] = useState<{
+    [key: string]: string;
+  } | null>(null);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setFileIsValid(false);
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -26,6 +33,8 @@ export default function Home() {
     if (!fileContent) return;
     const errors = fileContent.reduce((acc, item) => {
       if (!item["product_code"]) acc.push(`"product_code" é obrigatório`);
+      if (isNaN(Number(item["product_code"])))
+        acc.push(`"product_code" deve ser um número`);
       if (!item["new_price"]) acc.push(`"new_price" é obrigatório`);
       if (item["new_price"] && isNaN(Number(item["new_price"])))
         acc.push(`"new_price" deve ser um número`);
@@ -33,16 +42,55 @@ export default function Home() {
     }, [] as string[]);
 
     setFileErrors(errors);
-    setFileIsValid(errors.length === 0);
-
     if (errors.length > 0) return;
 
     console.log("buscando produto(s)...");
+
+    fetch(`http://localhost:3000/products/${fileContent[0]["product_code"]}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.error) {
+          console.error("Erro ao buscar produto(s):", data.message);
+          setFileErrors([data.message]);
+          return;
+        }
+        setProduct(data);
+        setFileIsValid(true);
+      })
+      .catch((error) => {
+        console.error("Erro ao buscar produto(s):", error);
+      });
+  };
+
+  const updatePrice = () => {
+    if (!fileContent) return;
+    console.log("atualizando preço...");
+    fetch(`http://localhost:3000/products/${fileContent[0]["product_code"]}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ new_price: fileContent[0]["new_price"] }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.error) {
+          console.error("Erro ao atualizar preço:", data.message);
+          setFileErrors([data.message]);
+          setFileIsValid(false);
+          return;
+        }
+        setUpdatedProduct(data);
+        console.log("Preço atualizado com sucesso!");
+      })
+      .catch((error) => {
+        console.error("Erro ao atualizar preço:", error);
+      });
   };
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="grid w-full max-w-sm items-center gap-4">
+      <div className="grid w-full max-w-lg items-center gap-4 border-[1px] border-gray-900 px-12 py-12">
         <div className="space-y-2">
           <label htmlFor="file">
             Carregue o arquivo com a atualização de preço
@@ -65,15 +113,39 @@ export default function Home() {
             </label>
           </div>
           <span className="text-sm text-gray-500 peer-disabled:opacity-70">
-            {fileName}
+            {fileName ? fileName : "Nenhum arquivo selecionado"}
           </span>
         </div>
         <p className="text-sm text-gray-500">
-          {fileContent
-            ? JSON.stringify(fileContent, null, 2)
-            : "Nenhum arquivo selecionado"}
+          {updatedProduct ? (
+            <div>
+              <p className="text-xl bg-green-200 rounded-sm px-2 py-1 text-center text-green-900">
+                Preço atualizado com sucesso!
+              </p>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Nome</th>
+                    <th>Preço Atual</th>
+                    <th>Novo Preço</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>{updatedProduct.code}</td>
+                    <td>{updatedProduct.name}</td>
+                    <td>{product!.sales_price}</td>
+                    <td>{updatedProduct.sales_price}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            ""
+          )}
         </p>
-        <div className="flex gap-2">
+        <div className="flex gap-2 pt-4 border-t-[1px] border-gray-900">
           <button
             className="border border-gray-200 rounded-md py-2 px-4 text-sm font-medium text-gray-700 bg-white hover:bg-gray-200"
             onClick={validateFile}
@@ -83,6 +155,7 @@ export default function Home() {
           <button
             className="border border-gray-200 rounded-md py-2 px-4 text-sm font-medium text-gray-700 bg-white hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!fileIsValid}
+            onClick={updatePrice}
           >
             Atualizar
           </button>
